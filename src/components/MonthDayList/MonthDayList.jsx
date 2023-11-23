@@ -8,6 +8,8 @@ export const MonthDayList = ({
                                  events,
                                  openFormHendler,
                                  today,
+                                 updateEvent,
+                                 method
                              }) => {
     const day = startDay.clone().subtract(1, "day");
 
@@ -17,6 +19,8 @@ export const MonthDayList = ({
             today={today}
             dayItem={dayItem}
             openFormHendler={openFormHendler}
+            updateEvent={updateEvent}
+            method={method}
             events={events.filter((event) =>
                 isDayContainCurrentEvent(event, dayItem),
             )}

@@ -14,9 +14,8 @@ const ShadowWrapper = styled("div")`
   border-bottom: 2px solid #464648;
   border-radius: 5px;
   overflow: hidden;
-  box-shadow:
-    0 0 0 1px #1a1a1a,
-    0 0px 20px 6px #000;
+  box-shadow: 0 0 0 1px #1a1a1a,
+  0 0px 20px 6px #000;
 `;
 const FromPositionWrapper = styled("div")`
   position: absolute;
@@ -94,7 +93,7 @@ function App() {
 
     window.moment = moment;
     // const today = moment();
-    moment.updateLocale("en", { week: { dow: 1 } });
+    moment.updateLocale("en", {week: {dow: 1}});
     const startDay = today.clone().startOf("month").startOf("week");
     const totalDays = 42;
     const url = " http://localhost:3000";
@@ -102,6 +101,8 @@ function App() {
         title: "",
         description: "",
         date: moment().format("x"),
+        create_at: null,
+        update_at: null
     };
     const prevHendler = () => {
         setToday((prev) => prev.clone().subtract(1, "month"));
@@ -124,12 +125,33 @@ function App() {
             });
     }, [today]);
 
+    useEffect(() => {
+        localStorage.setItem('events', events);
+    }, [events]);
+
     const openFormHendler = (methodName, eventForUpdate, dayItem) => {
-        console.log("methodName", methodName);
-        setShowForm(true);
-        setEvent(eventForUpdate || { ...defautEvant, date: dayItem.format("x") });
-        setMethod(methodName);
+        // setShowForm(true);
+        //
+        // setEvent(eventForUpdate || {...defautEvant, date: dayItem.format("x")});
+        //  setMethod(methodName);
+        // if (eventForUpdate !== null) {
+        //     setShowForm(true);
+          //  setEvent({...eventForUpdate, update_at: dayItem.format('x')});
+           // console.log('eventForUpdate', eventForUpdate);
+        //
+        //     setMethod(methodName);
+        // } else {
+            setShowForm(true);
+            setEvent( eventForUpdate || {...defautEvant, date: dayItem.format("x")});
+            setMethod(methodName);
+        // }
     };
+
+    const updateEvent = ( eventForUpdate) =>{
+        setEvent({...eventForUpdate, update_at: moment().format('x')});
+        console.log('updateEvent');
+    };
+
     const cancelButtonHandler = () => {
         setShowForm(false);
         setEvent(null);
@@ -207,11 +229,24 @@ function App() {
                             placeholder="Description"
                         />
                         <EventData>
-                            {method === "Update"
-                                ? `"Created"${moment
-                                    .unix(event.date)
-                                    .format("YYYY-MM-DD HH:mm:")} `
-                                : `"Create date"${moment().format("YYYY-MM-DD HH:mm:")} `}
+                            {/*{method === "Update"*/}
+                            {/*    ? `"Created at"${moment*/}
+                            {/*        .unix(event.date)*/}
+                            {/*        .format("YYYY-MM-DD HH:mm:")} `*/}
+                            {/*    : `"Create date"${moment().format("YYYY-MM-DD HH:mm:")} `}*/}
+
+                            {event.update_at ? (
+                                <p>
+                                    Updated Date {moment.unix(event.update_at).format('YYYY-MM-DD HH:mm:')}
+                                </p>
+                            ): event.date && (
+                                <p>
+                                    Created Date {moment.unix(event.date).format('YYYY-MM-DD HH:mm:')}
+                                </p>
+                            )}
+
+
+
                         </EventData>
                         <ButtonsWrapper>
                             <ButtonWrapper onClick={cancelButtonHandler}>
@@ -230,7 +265,7 @@ function App() {
                 </FromPositionWrapper>
             ) : null}
             <ShadowWrapper>
-                <Header />
+                <Header/>
                 <Control
                     today={today}
                     prevHendler={prevHendler}
@@ -243,6 +278,9 @@ function App() {
                     totalDays={totalDays}
                     events={events}
                     openFormHendler={openFormHendler}
+                    updateEvent={updateEvent}
+                    method={method}
+
                 />
             </ShadowWrapper>
         </>

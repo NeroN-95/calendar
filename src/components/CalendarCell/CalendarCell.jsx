@@ -50,7 +50,7 @@ const EventListItemWrapper = styled("li")`
   padding-bottom: 2px;
   display: flex;
 `;
-export const CalendarCell = ({ dayItem, today, openFormHendler, events }) => {
+export const CalendarCell = ({ dayItem, today, openFormHendler, events,updateEvent,method }) => {
     return (
         <>
             <CellWrapper
@@ -74,7 +74,10 @@ export const CalendarCell = ({ dayItem, today, openFormHendler, events }) => {
                         {events.slice(0, 2).map((event) => (
                             <EventListItemWrapper key={event.id}>
                                 <EventItemWrapper
-                                    onClick={() => openFormHendler("Update", event)}
+                                    onClick={() => {
+                                        openFormHendler("Update", event, dayItem);
+                                        method === "Update" && updateEvent(event);
+                                    }}
                                 >
                                     {event.title}
                                 </EventItemWrapper>

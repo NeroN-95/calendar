@@ -6,8 +6,7 @@ height: 28px;
 const Header = () => {
     return (
         <DivWrapper>
-            Header
-
+            Header panel
         </DivWrapper>
     );
 }

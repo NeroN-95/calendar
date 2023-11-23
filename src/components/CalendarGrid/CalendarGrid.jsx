@@ -4,7 +4,7 @@ import {MonthDayList} from "../MonthDayList/MonthDayList.jsx";
 
 
 
-const CalendarGrid = ({startDay, today, totalDays, events, openFormHendler}) => {
+const CalendarGrid = ({startDay, today, totalDays, events, openFormHendler, updateEvent,method}) => {
 
 
     const GridWrapper = styled.div`
@@ -15,7 +15,7 @@ const CalendarGrid = ({startDay, today, totalDays, events, openFormHendler}) => 
       ${props => props.isHeader && "border-bottom: 1px solid black"}
     `;
 
-    // console.log('isCurrentDay',isCurrentDay)
+
     return (
 
         <>
@@ -30,6 +30,8 @@ const CalendarGrid = ({startDay, today, totalDays, events, openFormHendler}) => 
                     events={events}
                     openFormHendler={openFormHendler}
                     today={today}
+                    updateEvent={updateEvent}
+                    method={method}
                 />
             </GridWrapper>
 
