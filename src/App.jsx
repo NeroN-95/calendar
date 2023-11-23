@@ -142,13 +142,13 @@ function App() {
         //     setMethod(methodName);
         // } else {
             setShowForm(true);
-            setEvent( eventForUpdate || {...defautEvant, date: dayItem.format("x")});
+            setEvent( eventForUpdate || {...defautEvant, date: dayItem.format("X")});
             setMethod(methodName);
         // }
     };
 
     const updateEvent = ( eventForUpdate) =>{
-        setEvent({...eventForUpdate, update_at: moment().format('x')});
+        setEvent({...eventForUpdate, update_at: moment().format('X')});
         console.log('updateEvent');
     };
 
@@ -237,11 +237,11 @@ function App() {
 
                             {event.update_at ? (
                                 <p>
-                                    Updated Date {moment.unix(event.update_at).format('YYYY-MM-DD HH:mm:')}
+                                    Updated Date {moment.unix(event.update_at ).format('YYYY-MM-DD HH:mm:')}
                                 </p>
                             ): event.date && (
                                 <p>
-                                    Created Date {moment.unix(event.date).format('YYYY-MM-DD HH:mm:')}
+                                    Created Date {moment.unix(event.date).format('YYYY-MM-DD ')}
                                 </p>
                             )}
 
