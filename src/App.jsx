@@ -1,6 +1,6 @@
 import "./App.css";
 import moment from "moment";
-
+import { ColorRing } from 'react-loader-spinner'
 import styled from "styled-components";
 import {useEffect, useState} from "react";
 import Control from "./components/Control/Control.jsx";
@@ -83,18 +83,24 @@ const ButtonWrapper = styled("button")`
     margin-right: 2px;
   }
 `;
-
+const LouderWrapper = styled('div')`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`;
 function App() {
     const [today, setToday] = useState(moment());
     const [events, setEvents] = useState([]);
     const [event, setEvent] = useState(null);
     const [isShowForm, setShowForm] = useState(false);
     const [method, setMethod] = useState(null);
+    const [isLoader, setLoader] = useState(true);
 
-    window.moment = moment;
+    //window.moment = moment;
     // const today = moment();
     moment.updateLocale("en", {week: {dow: 1}});
-    const startDay = today.clone().startOf("month").startOf("week");
+   const startDay = today.clone().startOf("month").startOf("week");
+
     const totalDays = 42;
     const url = " http://localhost:3000";
     const defautEvant = {
@@ -104,30 +110,51 @@ function App() {
         create_at: null,
         update_at: null
     };
+
+
     const prevHendler = () => {
-        setToday((prev) => prev.clone().subtract(1, "month"));
+        setToday((prev) => {
+            const prevItem =
+                prev.clone().subtract(1, "month");
+            localStorage.setItem('today', JSON.stringify(prevItem));
+            return prevItem;
+        });
     };
 
     const todayHendler = () => {
-        setToday(moment());
+        const itemToday = moment();
+        setToday(itemToday);
+        localStorage.setItem('today', JSON.stringify(itemToday));
     };
     const nextHendler = () => {
-        setToday((next) => next.clone().add(1, "month"));
+
+        setToday((next) => {
+            const nextItem =
+                next.clone().add(1, "month");
+            localStorage.setItem('today', JSON.stringify(nextItem));
+            return nextItem;
+        });
     };
     const startDayQuery = startDay.clone().format("X");
     const endDayQuery = startDay.clone().add(totalDays, "days").format("X");
+
+
+    useEffect(() => {
+      const storedData =  localStorage.getItem('today');
+        storedData ? setToday(moment(JSON.parse(storedData))) : null
+    }, []);
+
 
     useEffect(() => {
         fetch(`${url}/events?date_gte=${startDayQuery}&date_lte=${endDayQuery}`)
             .then((res) => res.json())
             .then((res) => {
                 setEvents(res);
+                setLoader(false);
             });
-    }, [today]);
+    }, [today, startDayQuery, endDayQuery]);
 
-    useEffect(() => {
-        localStorage.setItem('events', events);
-    }, [events]);
+
 
     const openFormHendler = (methodName, eventForUpdate, dayItem) => {
         // setShowForm(true);
@@ -136,18 +163,18 @@ function App() {
         //  setMethod(methodName);
         // if (eventForUpdate !== null) {
         //     setShowForm(true);
-          //  setEvent({...eventForUpdate, update_at: dayItem.format('x')});
-           // console.log('eventForUpdate', eventForUpdate);
+        //  setEvent({...eventForUpdate, update_at: dayItem.format('x')});
+        // console.log('eventForUpdate', eventForUpdate);
         //
         //     setMethod(methodName);
         // } else {
-            setShowForm(true);
-            setEvent( eventForUpdate || {...defautEvant, date: dayItem.format("X")});
-            setMethod(methodName);
-        // }
+        setShowForm(true);
+        setEvent(eventForUpdate || {...defautEvant, date: dayItem.format("X")});
+        setMethod(methodName);
+
     };
 
-    const updateEvent = ( eventForUpdate) =>{
+    const updateEvent = (eventForUpdate) => {
         setEvent({...eventForUpdate, update_at: moment().format('X')});
         console.log('updateEvent');
     };
@@ -210,6 +237,21 @@ function App() {
                 cancelButtonHandler();
             });
     };
+    if (isLoader ){
+        return <LouderWrapper >
+            <ColorRing
+
+                visible={true}
+                height="80"
+                width="80"
+                ariaLabel="blocks-loading"
+                wrapperClass="blocks-wrapper"
+                colors={['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff']}
+            />
+        </LouderWrapper>
+
+
+    }
 
     return (
         <>
@@ -237,14 +279,13 @@ function App() {
 
                             {event.update_at ? (
                                 <p>
-                                    Updated Date {moment.unix(event.update_at ).format('YYYY-MM-DD HH:mm:')}
+                                    Updated Date {moment.unix(event.update_at).format('YYYY-MM-DD HH:mm:')}
                                 </p>
-                            ): event.date && (
+                            ) : event.date && (
                                 <p>
                                     Created Date {moment.unix(event.date).format('YYYY-MM-DD ')}
                                 </p>
                             )}
-
 
 
                         </EventData>
