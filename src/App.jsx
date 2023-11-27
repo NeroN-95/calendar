@@ -6,6 +6,7 @@ import {useEffect, useState} from "react";
 import Control from "./components/Control/Control.jsx";
 import CalendarGrid from "./components/CalendarGrid/CalendarGrid.jsx";
 import Header from "./components/Header/Header.jsx";
+import ErrorSidePanel from "./components/ErrorSidePanel/ErrorSidePanel.jsx";
 
 const ShadowWrapper = styled("div")`
   border-top: 1px solid #737374;
@@ -88,6 +89,7 @@ const LouderWrapper = styled('div')`
   justify-content: center;
   align-items: center;
 `;
+
 function App() {
     const [today, setToday] = useState(moment());
     const [events, setEvents] = useState([]);
@@ -95,6 +97,7 @@ function App() {
     const [isShowForm, setShowForm] = useState(false);
     const [method, setMethod] = useState(null);
     const [isLoader, setLoader] = useState(true);
+    const [apiError, setApiError] = useState(null);
 
     //window.moment = moment;
     // const today = moment();
@@ -147,36 +150,45 @@ function App() {
 
     useEffect(() => {
         fetch(`${url}/events?date_gte=${startDayQuery}&date_lte=${endDayQuery}`)
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error('Failed to fetch data from the server');
+                }
+                return res.json();
+            })
             .then((res) => {
                 setEvents(res);
                 setLoader(false);
+                setApiError(null); // Reset error state on successful API response
+                localStorage.setItem('eventsData', JSON.stringify(res)); // Save data to localStorage
+            })
+            .catch((error) => {
+                console.error(error);
+                setApiError(error.message);
+                setLoader(false);
+                const storedData = localStorage.getItem('eventsData');
+                if (storedData) {
+                    setEvents(JSON.parse(storedData));
+                }
             });
     }, [today, startDayQuery, endDayQuery]);
 
 
-
     const openFormHendler = (methodName, eventForUpdate, dayItem) => {
-        // setShowForm(true);
-        //
-        // setEvent(eventForUpdate || {...defautEvant, date: dayItem.format("x")});
-        //  setMethod(methodName);
-        // if (eventForUpdate !== null) {
-        //     setShowForm(true);
-        //  setEvent({...eventForUpdate, update_at: dayItem.format('x')});
-        // console.log('eventForUpdate', eventForUpdate);
-        //
-        //     setMethod(methodName);
-        // } else {
+
         setShowForm(true);
+        if (events.length === 0) {
+            const storedData = localStorage.getItem("eventsData");
+            if (storedData) {
+                setEvents(JSON.parse(storedData));
+            }
+        }
         setEvent(eventForUpdate || {...defautEvant, date: dayItem.format("X")});
         setMethod(methodName);
-
     };
 
     const updateEvent = (eventForUpdate) => {
         setEvent({...eventForUpdate, update_at: moment().format('X')});
-        console.log('updateEvent');
     };
 
     const cancelButtonHandler = () => {
@@ -189,8 +201,10 @@ function App() {
             [field]: text,
         }));
     };
-
-    const fetchHandler = (fetchUrl, eventForUpdate, httpMethod) => {
+    const closeErrorSidePanel = () => {
+        setApiError(null);
+    };
+    const fetchHandler = (fetchUrl, eventForUpdate, httpMethod, onSuccess) => {
         fetch(fetchUrl, {
             method: httpMethod,
             headers: {
@@ -198,44 +212,75 @@ function App() {
             },
             body: JSON.stringify(eventForUpdate),
         })
-            .then((res) => res.json())
             .then((res) => {
-                if (httpMethod === "PATCH") {
-                    setEvents((prevState) =>
-                        prevState.map((eventEl) => (eventEl.id === res.id ? res : eventEl)),
-                    );
-                } else {
-                    setEvents((prevState) => [...prevState, res]);
+                if (!res.ok) {
+                    throw new Error("Network response was not ok");
                 }
+                return res.json();
+            })
+            .then((res) => {
+                setEvents((prevState) =>
+                    httpMethod === "PATCH"
+                        ? prevState.map((eventEl) => (eventEl.id === res.id ? res : eventEl))
+                        : [...prevState, res]
+                );
+
+                if (onSuccess && typeof onSuccess === "function") {
+                    onSuccess(res);
+                }
+
+                setApiError(null);
+                cancelButtonHandler();
+            })
+            .catch((error) => {
+                setApiError("Error fetching data from the server");
+                console.error("Fetch error:", error);
                 cancelButtonHandler();
             });
     };
 
     const eventFetchHandler = () => {
-        const fetchUrl =
-            method === "Update" ? `${url}/events/${event.id}` : `${url}/events`;
+        const fetchUrl = method === "Update" ? `${url}/events/${event.id}` : `${url}/events`;
         const httpMethod = method === "Update" ? "PATCH" : "POST";
+        const dataToSend = httpMethod === "PATCH" ? event : { ...event, id: undefined };
 
-        fetchHandler(fetchUrl, event, httpMethod);
+        fetchHandler(fetchUrl, dataToSend, httpMethod, (responseData) => {
+            if (httpMethod === "POST") {
+                setEvent({ ...event, id: responseData.id });
+            }
+        });
     };
     const removeEventHandler = () => {
-        const fetchUrl = `${url}/events/${event.id}`;
-        const httpMethod = "DELETE";
-
-        fetch(fetchUrl, {
-            method: httpMethod,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
-            .then((res) => res.json())
-            .then((res) => {
-                console.log(res);
-                setEvents((prevState) =>
-                    prevState.filter((eventEl) => eventEl.id !== event.id),
-                );
-                cancelButtonHandler();
-            });
+        const updatedEvents = events.filter((eventEl) => eventEl.id !== event.id);
+        setEvents(updatedEvents);
+        localStorage.setItem('eventsData', JSON.stringify(updatedEvents));
+        if (navigator.onLine) {
+            fetch(`${url}/events/${event.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+                .then((res) => {
+                    if (!res.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return res.json();
+                })
+                .then(() => {
+                    setApiError(null);
+                    cancelButtonHandler();
+                })
+                .catch((error) => {
+                    setApiError('Error deleting data from the server');
+                    console.error('Delete error:', error);
+                });
+        } else {
+            const dataToDelete = { id: event.id };
+            fetchHandler(`${url}/events/${event.id}`, dataToDelete, 'DELETE');
+            setApiError('Server is not available. Changes saved locally.');
+            cancelButtonHandler();
+        }
     };
     if (isLoader ){
         return <LouderWrapper >
@@ -249,12 +294,13 @@ function App() {
                 colors={['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff']}
             />
         </LouderWrapper>
-
-
     }
 
     return (
         <>
+            {apiError && (
+                <ErrorSidePanel message={apiError} onClose={closeErrorSidePanel} />
+            )}
             {isShowForm ? (
                 <FromPositionWrapper onClick={cancelButtonHandler}>
                     <FromWrapper onClick={(e) => e.stopPropagation()}>
@@ -271,12 +317,6 @@ function App() {
                             placeholder="Description"
                         />
                         <EventData>
-                            {/*{method === "Update"*/}
-                            {/*    ? `"Created at"${moment*/}
-                            {/*        .unix(event.date)*/}
-                            {/*        .format("YYYY-MM-DD HH:mm:")} `*/}
-                            {/*    : `"Create date"${moment().format("YYYY-MM-DD HH:mm:")} `}*/}
-
                             {event.update_at ? (
                                 <p>
                                     Updated Date {moment.unix(event.update_at).format('YYYY-MM-DD HH:mm:')}
@@ -286,7 +326,6 @@ function App() {
                                     Created Date {moment.unix(event.date).format('YYYY-MM-DD ')}
                                 </p>
                             )}
-
 
                         </EventData>
                         <ButtonsWrapper>
@@ -321,7 +360,6 @@ function App() {
                     openFormHendler={openFormHendler}
                     updateEvent={updateEvent}
                     method={method}
-
                 />
             </ShadowWrapper>
         </>
